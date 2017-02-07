@@ -1,4 +1,0 @@
-﻿  ImageChange.cpp
-d:\cvisionlab\unitedcolorseffect\unitedcolorseffect\unitedcolorseffect\imagechange.cpp(156): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-  UnitedColorsEffect.vcxproj -> D:\CVisionLab\UnitedColorsEffect\UnitedColorsEffect\x64\Debug\UnitedColorsEffect.exe
-  UnitedColorsEffect.vcxproj -> D:\CVisionLab\UnitedColorsEffect\UnitedColorsEffect\x64\Debug\UnitedColorsEffect.pdb (Full PDB)
