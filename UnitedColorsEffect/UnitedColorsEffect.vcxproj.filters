@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ImageChange.cpp">
+    <ClCompile Include="united_colors_effect.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>
