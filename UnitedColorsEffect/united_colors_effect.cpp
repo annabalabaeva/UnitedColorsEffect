@@ -8,23 +8,24 @@
 const int EFFECT_SLIDER_MAX = 100;
 /** RGB image channels count */
 const int N_RGB_CHANNELS = 3;
-/** Current effect degree (procent) */
-int effect_degree_procent;
+
+
 
 /**
  * A struct to pass data to modify image to On trackbar changed event handler.
  * @see on on_trackbar_changed(int, void* matrixes)
  */
-struct ImageMatrixes {
-    cv::Mat* original; /** Loaded image (CV_16SC3 or CV_16SC4 format) */
-    cv::Mat* transforming; /** Matrix modifying original image (CV_16SC3 or CV_16SC4 format) */
-    cv::Mat* changed; /** Modified image (CV_8UC3 or CV_8UC4 format) */
+struct EffectContext {
+    cv::Mat original_img; /** Loaded image (CV_16SC3 or CV_16SC4 format) */
+    cv::Mat transforming_matrix; /** Matrix modifying original image (CV_16SC3 or CV_16SC4 format) */
+    cv::Mat changed_img; /** Modified image (CV_8UC3 or CV_8UC4 format) */
+    int effect_degree_procent = 0; /** Current effect degree (procent) */
 };
 
 void on_trackbar_changed(int, void* matrixes);
 void fill_transform_matrix(cv::Mat& transform_matrix, cv::Mat& img_original);
-bool is_img_open(cv::Mat& img_original, const char* file_path, int imread_flag);
-bool is_changed_img_saved(const cv::Mat& img_changed, const char* file_path);
+bool image_open(cv::Mat& img_original, std::string& file_path, int imread_flag);
+bool image_save(const cv::Mat& img_changed, std::string& file_path);
 void convert_slash_string(std::string& file_path);
 
 int main(int argc, const char** argv) {
@@ -45,7 +46,7 @@ int main(int argc, const char** argv) {
 
 
     cv::Mat img_original;
-    if (!is_img_open(img_original, argv[1], img_read_type)) {
+    if (!image_open(img_original, static_cast<std::string>(argv[1]), img_read_type)) {
         std::cout << "Wrong input file path." << std::endl;
         return EXIT_FAILURE;
     }
@@ -64,23 +65,23 @@ int main(int argc, const char** argv) {
     cv::Mat img_original_16s;
     img_original.convertTo(img_original_16s, transform_matrix_type);
 
-    ImageMatrixes matrixes;
-    matrixes.original = &img_original_16s;
-    matrixes.transforming = &transform_matrix;
-    matrixes.changed = &img_changed;
+    EffectContext context;
+    context.original_img = img_original_16s;
+    context.transforming_matrix = transform_matrix;
+    context.changed_img.create(img_changed.size(), img_changed.type());
 
     cv::namedWindow("United Colors Effect", CV_WINDOW_AUTOSIZE);
 
     std::string trackbar_name = "Effect";
     cv::createTrackbar(trackbar_name, "United Colors Effect",
-                       &effect_degree_procent, EFFECT_SLIDER_MAX,
-                       on_trackbar_changed, &matrixes);
+                       &context.effect_degree_procent, EFFECT_SLIDER_MAX,
+                       on_trackbar_changed, &context);
 
     cv::imshow("United Colors Effect", img_original);
     cv::waitKey(0);
 
 
-    if (!is_changed_img_saved(img_changed, argv[2])) {
+    if (!image_save(img_changed, static_cast<std::string>(argv[2]))) {
         std::cout << "Can't save changed image. Check output file path." 
             << std::endl;
         return EXIT_FAILURE;
@@ -96,19 +97,19 @@ int main(int argc, const char** argv) {
  * On trackbar changed event handler.
  * @param pos integer trackbar position
  * @param img_matrixes pointer to struct with original, modifying and changed matrixes
- * @see ImageMatrixes
+ * @see EffectContext
  */
 static void on_trackbar_changed(int pos, void* img_matrixes) {
+    
+    EffectContext context = *((EffectContext*)img_matrixes);
     double effect_degree_multiplier = 
-        (double)effect_degree_procent / EFFECT_SLIDER_MAX;
-    ImageMatrixes matrixes = *((ImageMatrixes*)img_matrixes);
-
+        (double)context.effect_degree_procent / EFFECT_SLIDER_MAX;
     cv::Mat temp;
-    temp = (*(matrixes.original)) +
-           effect_degree_multiplier*(*(matrixes.transforming));
-    temp.convertTo(*(matrixes.changed), (*(matrixes.changed)).type());
+    temp = context.original_img +
+           effect_degree_multiplier*context.transforming_matrix;
+    temp.convertTo(context.changed_img, context.changed_img.type());
 
-    cv::imshow("United Colors Effect", *(matrixes.changed));
+    cv::imshow("United Colors Effect", context.changed_img);
 }
 
 
@@ -151,13 +152,12 @@ void fill_transform_matrix(cv::Mat& transform_matrix, cv::Mat& img_original) {
  * Function reads image located in file_path_char with flag from imread_flag
  * and put data to imgOriginal.
  * @param img_original reference to Mat object where original image should be saved
- * @param file_path_char path to file with original image
+ * @param file_path path to file with original image
  * @param imread_flag integer flag to read original image as RGB or RGBA
  * @return true if there is no error. False if there is an error 
  * while reading (e.g., wrong file path)
  */
-bool is_img_open(cv::Mat& img_original, const char* file_path_char, int imread_flag) {
-    std::string file_path(file_path_char);
+bool image_open(cv::Mat& img_original, std::string& file_path, int imread_flag) {
     convert_slash_string(file_path);
     img_original = cv::imread(file_path, imread_flag);
     if (img_original.empty()) return false;
@@ -168,12 +168,11 @@ bool is_img_open(cv::Mat& img_original, const char* file_path_char, int imread_f
 /**
  * Function writes image from img_changed to location specified in file_path_char.
  * @param img_changed reference to Mat object with changed image
- * @param file_path_char path to file where changed image should be saved
+ * @param file_path path to file where changed image should be saved
  * @return true if there is no error. False if there is an error
  * while writing (e.g., wrong file path)
  */
-bool is_changed_img_saved(const cv::Mat& img_changed, const char* file_path_char) {
-    std::string file_path(file_path_char);
+bool image_save(const cv::Mat& img_changed, std::string& file_path) {
     convert_slash_string(file_path);
     if (cv::imwrite(file_path, img_changed)) {
         return true;
